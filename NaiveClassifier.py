@@ -23,7 +23,8 @@ class NaiveClassifier:
 
         self.data['positive'] = self.positive['X1']
         self.data['negative'] = self.negative['X1']
-        self.data, self.test_data = self.data.random_split(.9,seed=5)
+
+        self.data, self.test_data = self.data.random_split(.8, seed=77)
         print self.negative_num
         print self.positive_num
 
@@ -100,8 +101,8 @@ class NaiveClassifier:
         ntest = negativeP - (positiveP + negativeP)
         if ptest > ntest:
 
-            # print review + "\n is a positive review with probability: " + str(positiveP / float(negativeP + positiveP))
+            #print review + "\n is a positive review with probability: " + str(positiveP/negativeP)
             return 1
         else:
-            # print review + "\n is a negative review with probability: " + str(negativeP / float(negativeP + positiveP))
+            #print review + "\n is a negative review with probability: " + str(negativeP/negativeP)
             return 0
