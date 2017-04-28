@@ -1,6 +1,7 @@
+import decimal
 import math as m
 
-import numpy as np
+import nltk
 import sframe as sf
 
 
@@ -24,7 +25,9 @@ class NaiveClassifier:
 
         self.data['positive'] = self.positive['X1']
         self.data['negative'] = self.negative['X1']
-
+        self.data['positive'] = self.data['positive'].apply(self.filter_words)
+        self.data['negative'] = self.data['negative'].apply(self.filter_words)
+        print self.data['positive'][-1]
         # reader = sf.SFrame.read_csv('Reviews.csv')
         # self.pos_data = reader[reader['Score'] > 3]
         # self.neg_data = reader[reader['Score'] < 3]
@@ -33,12 +36,12 @@ class NaiveClassifier:
         # self.positive_num = float(self.pos_data['Text'].size())
         # self.negative_num = float(self.neg_data['Text'].size())
 
-        self.data, self.test_data = self.data.random_split(.8, seed=4)
+        self.data, self.test_data = self.data.random_split(.5, seed=0)
         print self.negative_num
         print self.positive_num
 
     def word_count(self, Type, X):
-        X = set(X.split())
+        X = set(X)
 
         if Type == 'negative':
             for word in X:
@@ -117,7 +120,7 @@ class NaiveClassifier:
             return self.prob_classify(review)
 
     def log_classify(self, review):
-        word_set = set(review.split())
+        word_set = set(review)
         negativeP = 0.0
         positiveP = 0.0
 
@@ -148,40 +151,55 @@ class NaiveClassifier:
             return 0
 
     def prob_classify(self, review):
-        word_set = set(review.split())
-        negativeP = np.longdouble(1.0)
-        positiveP = np.longdouble(1.0)
+        word_set = set(review)
+        decimal.getcontext().prec = 50
 
-        for word in self.positive_count:
-            if word in word_set:
-                positiveP *= float(self.positive_count[word])
-                positiveP = self.round_up(positiveP, 4)
-            else:
-                positiveP *= 1.0 - self.positive_count[word]
-                positiveP = self.round_up(positiveP, 4)
-                # print positiveP
-        for word in self.negative_count:
-            if word in word_set:
-                negativeP *= float(self.negative_count[word])
-                negativeP = self.round_up(negativeP, 4)
-            else:
-                negativeP *= 1.0 - self.negative_count[word]
-                negativeP = self.round_up(negativeP, 4)
-        # print negativeP
-        positiveP *= self.positive_num / (self.positive_num + self.negative_num)
-        negativeP *= self.negative_num / (self.positive_num + self.negative_num)
-        ptest = positiveP / (positiveP * negativeP)
-        ntest = negativeP / (positiveP * negativeP)
+        negativeP = decimal.Decimal(1.0)
+        positiveP = decimal.Decimal(1.0)
+
+        for word in word_set:
+            if word in self.positive_count:
+                positiveP *= decimal.Decimal(float(self.positive_count[word]))
+
+            if word in self.negative_count:
+                negativeP *= decimal.Decimal(float(self.negative_count[word]))
+
+
+        positiveP *= decimal.Decimal(self.positive_num / (self.positive_num + self.negative_num))
+        negativeP *= decimal.Decimal(self.negative_num / (self.positive_num + self.negative_num))
+        try:
+            ptest = positiveP / decimal.Decimal(positiveP * negativeP)
+            ntest = negativeP / decimal.Decimal(positiveP * negativeP)
+        except:
+            print positiveP
+            print negativeP
+            ptest = 1
+            ntest = 1
         # print ptest
         # print ntest
 
         if ptest > ntest:
 
             # print review + "\n is a positive review with probability: " + str(positiveP/negativeP)
-            return 1
+            return 0
         else:
             # print review + "\n is a negative review with probability: " + str(negativeP/negativeP)
-            return 0
+            return 1
 
     def round_up(self, x, place):
         return round(x + 5 * 10 ** (-1 * (place + 1)), place)
+
+    def filter_words(self, line):
+        # nltk.download()
+        is_noun = lambda pos: pos[:2] == 'NN' or pos[:2] == 'NNS' or pos[:2] == 'NNP'
+        is_adverb = lambda pos: pos[:2] == 'RB' or pos[:2] == 'RBR' or pos[:2] == 'RBS'
+        is_adj = lambda pos: pos[:2] == 'JJ' or pos[:2] == 'JJR' or pos[:2] == 'JJS'
+        is_verb = lambda pos: pos[:2] == 'VB' or pos[:2] == 'VBG' or pos[:2] == 'VBD' or \
+                              pos[:2] == 'VBP' or pos[:2] == 'VBZ' or pos[:2] == 'VBN'
+        included = lambda pos: is_noun(pos) or is_adj(pos) or is_adverb(pos) or is_verb(pos)
+
+        # do the nlp stuff
+        tokenized = nltk.word_tokenize(line)
+        words = [word for (word, pos) in nltk.pos_tag(tokenized) if included(pos)]
+
+        return words
