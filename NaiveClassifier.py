@@ -21,11 +21,10 @@ class NaiveClassifier:
         self.negative = sf.SFrame.read_csv("negative-data.csv", header=False)
         self.positive = sf.SFrame.read_csv("positive-data.csv", header=False)
 
-        self.data['positive'] = self.positive['X1']
-        self.data['negative'] = self.negative['X1']
-        self.data['positive'] = self.data['positive'].apply(self.filter_words)
-        self.data['negative'] = self.data['negative'].apply(self.filter_words)
-        print self.data['positive'][-1]
+        self.data['positive'] = self.positive['X1'].apply(self.filter_words)
+        self.data['negative'] = self.negative['X1'].apply(self.filter_words)
+
+
         # reader = sf.SFrame.read_csv('Reviews.csv')
         # self.pos_data = reader[reader['Score'] > 3]
         # self.neg_data = reader[reader['Score'] < 3]
@@ -34,10 +33,14 @@ class NaiveClassifier:
         # self.positive_num = float(self.pos_data['Text'].size())
         # self.negative_num = float(self.neg_data['Text'].size())
 
-        #self.data, self.test_data = self.data.random_split(.5, seed=0)
-        self.test_data = self.data
+
+
+
+        #self.data, self.test_data = self.data.random_split(.6, seed=0)
         self.negative_num = float(self.data['negative'].size())
         self.positive_num = float(self.data['positive'].size())
+
+
         print self.negative_num
         print self.positive_num
 
@@ -153,7 +156,11 @@ class NaiveClassifier:
 
     def prob_classify(self, review):
         word_set = set(review)
+
         decimal.getcontext().prec = 50
+
+
+
 
         negativeP = decimal.Decimal(1.0)
         positiveP = decimal.Decimal(1.0)
@@ -165,11 +172,14 @@ class NaiveClassifier:
             if word in self.negative_count:
                 negativeP *= decimal.Decimal(float(self.negative_count[word]))
 
+
         positiveP *= decimal.Decimal(self.positive_num / (self.positive_num + self.negative_num))
         negativeP *= decimal.Decimal(self.negative_num / (self.positive_num + self.negative_num))
         try:
+
             ptest = positiveP / decimal.Decimal(positiveP + negativeP)
             ntest = negativeP / decimal.Decimal(positiveP + negativeP)
+
         except:
             print positiveP
             print negativeP
