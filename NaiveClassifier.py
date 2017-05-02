@@ -1,4 +1,3 @@
-import decimal
 import math as m
 
 import nltk
@@ -6,26 +5,24 @@ import sframe as sf
 
 
 class NaiveClassifier:
-    negative = sf.SFrame()
-    positive = sf.SFrame()
-    data = sf.SFrame()
-    negative_count = {}
-    positive_count = {}
-    negative_num = 0.0
-    positive_num = 0.0
-    test_data = sf.SFrame()
+    negative = sf.SFrame()  # negative reviews
+    positive = sf.SFrame()  # positive reviews
+    data = sf.SFrame()  # contains both positive and negative data
+    negative_count = {}  # count of negative words
+    positive_count = {}  # count of positive words
+    negative_num = 0.0  # num of negative reviews
+    positive_num = 0.0  # num of positive reviews
+    test_data = sf.SFrame()  # test data - not always used
 
     def __init__(self, file1, file2):
         print 'reading...'
+        # read negative and positive data
+        self.negative = sf.SFrame.read_csv(file1, header=False)
+        self.positive = sf.SFrame.read_csv(file2, header=False)
+        # combine both sframes into data sframe in a manageable format
+        self.data['positive'] = self.positive['X1'].apply(self.filter_words)  # applies filtering to training data
+        self.data['negative'] = self.negative['X1'].apply(self.filter_words)
 
-        self.negative = sf.SFrame.read_csv("negative-data.csv", header=False)
-        self.positive = sf.SFrame.read_csv("positive-data.csv", header=False)
-
-        self.data['positive'] = self.positive['X1']
-        self.data['negative'] = self.negative['X1']
-        self.data['positive'] = self.data['positive'].apply(self.filter_words)
-        self.data['negative'] = self.data['negative'].apply(self.filter_words)
-        print self.data['positive'][-1]
         # reader = sf.SFrame.read_csv('Reviews.csv')
         # self.pos_data = reader[reader['Score'] > 3]
         # self.neg_data = reader[reader['Score'] < 3]
@@ -34,172 +31,118 @@ class NaiveClassifier:
         # self.positive_num = float(self.pos_data['Text'].size())
         # self.negative_num = float(self.neg_data['Text'].size())
 
-        #self.data, self.test_data = self.data.random_split(.5, seed=0)
-        self.test_data = self.data
+
+
+
+        # self.data, self.test_data = self.data.random_split(.6, seed=0)
+        # extract num of positive and negative reviews
         self.negative_num = float(self.data['negative'].size())
         self.positive_num = float(self.data['positive'].size())
+
         print self.negative_num
         print self.positive_num
 
-    def word_count(self, Type, X):
-        X = set(X)
+    def word_count(self, Type, X):  # counts word occurences in a string and adds it to the correct counts dictionary
+        X = set(X)  # take only distinct words
 
-        if Type == 'negative':
+        if Type == 'negative':  # negative sentence
             for word in X:
-                if word not in self.positive_count:
+                if word not in self.positive_count:  # if word not in positive counts then set its positive count to 0
                     self.positive_count[word] = 0.0
-                if word in self.negative_count:
+                if word in self.negative_count:  # if word in negative count then increment it else set it to 1
                     self.negative_count[word] += 1.0
                 else:
                     self.negative_count[word] = 1.0
         elif Type == 'positive':
             for word in X:
-                if word not in self.negative_count:
+                if word not in self.negative_count:  # if word not in negative counts then set its negative count to 0
                     self.negative_count[word] = 0.0
-                if word in self.positive_count:
+                if word in self.positive_count:  # if word in positive count then increment it else set it to 1
                     self.positive_count[word] += 1.0
                 else:
                     self.positive_count[word] = 1.0
 
-    def prob_word_count(self):
+    def log_word_count(self):  # computes log probability of word counts
         for word in self.positive_count:
-            self.positive_count[word] /= self.positive_num
-
-        for word in self.negative_count:
-            self.negative_count[word] /= self.negative_num
-
-    def log_word_count(self):
-        for word in self.positive_count:
-            if self.positive_count[word] != 0.0:
-                self.positive_count[word] = m.log(self.positive_count[word]) - m.log(self.positive_num)
+            if self.positive_count[word] != 0.0:  # can't take log of 0.0
+                self.positive_count[word] = m.log(self.positive_count[word]) - m.log(
+                    self.positive_num)  # log(a/b) = log a - log b
             else:
                 self.positive_count[word] = - m.log(self.positive_num)
 
-        for word in self.negative_count:
+        for word in self.negative_count:  # do same for negative count
             if self.negative_count[word] != 0.0:
                 self.negative_count[word] = m.log(self.negative_count[word]) - m.log(self.negative_num)
             else:
                 self.negative_count[word] = - m.log(self.negative_num)
 
-    def filter_counts(self):
-        to_remove = []
-        for word in self.positive_count:
-            if (self.positive_count[word] == 1.0 and self.negative_count[word] == 1.0) or (
-                            self.positive_count[word] == 0.0 and self.negative_count[word] == 0.0):
-                to_remove.append(word)
-        print to_remove
+    def classify(self, review):  # takes an input review and decides whether it's positive, negative or neutral
 
-    def log_train(self):
-        for review in self.data['negative']:
-            self.word_count('negative', review)
-        for review in self.data['positive']:
-            self.word_count('positive', review)
+        return self.log_classify(review)
 
-        self.log_word_count()
-        self.using_log = True
-        # self.filter_counts()
-        # print self.positive_count
-        # print self.negative_count
-        print 'Training done successfully...'
-
-    def prob_train(self):
-        for review in self.data['negative']:
-            self.word_count('negative', review)
-        for review in self.data['positive']:
-            self.word_count('positive', review)
-        self.prob_word_count()
-        self.using_log = False
-        # self.filter_counts()
-        # print self.positive_count
-        # print self.negative_count
-        print 'Training done successfully...'
-
-    def classify(self, review):
-        if self.using_log:
-            return self.log_classify(review)
-        else:
-            return self.prob_classify(review)
-
-    def log_classify(self, review):
-        word_set = set(review)
+    def log_classify(self, review):  # classifies using log word count
+        word_set = set(review)  # take distinct words
         negativeP = 0.0
         positiveP = 0.0
 
-        for word in self.positive_count:
-            if word in word_set:
-                positiveP += float(self.positive_count[word])
+        for word in self.positive_count:  # for each positive word we have
+            if word in word_set:  # if word in input review
+                positiveP += float(self.positive_count[word])  # sum it's log probability to total positive probability
             else:
-                positiveP += m.log(1.0 - m.exp(self.positive_count[word]))
-        for word in self.negative_count:
+                positiveP += m.log(1.0 - m.exp(self.positive_count[word]))  # else sum log (1-p) of word
+        for word in self.negative_count:  # do same for each negative word
             if word in word_set:
                 negativeP += float(self.negative_count[word])
             else:
                 negativeP += m.log(1.0 - m.exp(self.negative_count[word]))
-
+        # add effect of total positive vs negative probability
         positiveP += m.log(self.positive_num / (self.positive_num + self.negative_num))
         negativeP += m.log(self.negative_num / (self.positive_num + self.negative_num))
+        # calculate total positive probability vs total negative probability of review
         ptest = positiveP - (positiveP + negativeP)
         ntest = negativeP - (positiveP + negativeP)
+        # test variable is negative if review is negative, positive if review is positive, 0 if neutral by dafault
+        test = (ptest - ntest) / (ptest + ntest)
         # print ptest
         # print ntest
 
-        if ptest > ntest:
+        if test >= 0.005:  # add neutral threshold = 0.005
 
             # print review + "\n is a positive review with probability: " + str(positiveP/negativeP)
             return 1
-        else:
+        elif test <= -0.005:
             # print review + "\n is a negative review with probability: " + str(negativeP/negativeP)
+            return -1
+        else:
             return 0
 
-    def prob_classify(self, review):
-        word_set = set(review)
-        decimal.getcontext().prec = 50
+    def log_train(self):  # trains the classifier on training data
+        for review in self.data['negative']:  # count every positive review
+            self.word_count('negative', review)
+        for review in self.data['positive']:  # count every negative review
+            self.word_count('positive', review)
 
-        negativeP = decimal.Decimal(1.0)
-        positiveP = decimal.Decimal(1.0)
+        self.log_word_count()  # compute log probabilities
+        self.using_log = True
+        # self.filter_counts()
+        # print self.positive_count
+        # print self.negative_count
+        print 'Training done successfully...'  # flag
 
-        for word in word_set:
-            if word in self.positive_count:
-                positiveP *= decimal.Decimal(float(self.positive_count[word]))
+    def filter_words(self, line):  # removes stop words and extracts useful words
 
-            if word in self.negative_count:
-                negativeP *= decimal.Decimal(float(self.negative_count[word]))
-
-        positiveP *= decimal.Decimal(self.positive_num / (self.positive_num + self.negative_num))
-        negativeP *= decimal.Decimal(self.negative_num / (self.positive_num + self.negative_num))
-        try:
-            ptest = positiveP / decimal.Decimal(positiveP + negativeP)
-            ntest = negativeP / decimal.Decimal(positiveP + negativeP)
-        except:
-            print positiveP
-            print negativeP
-            ptest = 1
-            ntest = 1
-        # print ptest
-        # print ntest
-
-        if ptest > ntest:
-
-            # print review + "\n is a positive review with probability: " + str(positiveP/negativeP)
-            return 0
-        else:
-            # print review + "\n is a negative review with probability: " + str(negativeP/negativeP)
-            return 1
-
-    def round_up(self, x, place):
-        return round(x + 5 * 10 ** (-1 * (place + 1)), place)
-
-    def filter_words(self, line):
-        # nltk.download()
-        is_noun = lambda pos: pos[:2] == 'NN' or pos[:2] == 'NNS' or pos[:2] == 'NNP'
-        is_adverb = lambda pos: pos[:2] == 'RB' or pos[:2] == 'RBR' or pos[:2] == 'RBS'
-        is_adj = lambda pos: pos[:2] == 'JJ' or pos[:2] == 'JJR' or pos[:2] == 'JJS'
+        # nltk.download() -- for dependencies download
+        is_noun = lambda pos: pos[:2] == 'NN' or pos[:2] == 'NNS' or pos[:2] == 'NNP'  # true if word is noun
+        is_adverb = lambda pos: pos[:2] == 'RB' or pos[:2] == 'RBR' or pos[:2] == 'RBS'  # true if word is adverb
+        is_adj = lambda pos: pos[:2] == 'JJ' or pos[:2] == 'JJR' or pos[:2] == 'JJS'  # true if word is adjective
         is_verb = lambda pos: pos[:2] == 'VB' or pos[:2] == 'VBG' or pos[:2] == 'VBD' or \
-                              pos[:2] == 'VBP' or pos[:2] == 'VBZ' or pos[:2] == 'VBN'
-        included = lambda pos: is_noun(pos) or is_adj(pos) or is_adverb(pos) or is_verb(pos)
+                              pos[:2] == 'VBP' or pos[:2] == 'VBZ' or pos[:2] == 'VBN'  # true if word is verb
+        included = lambda pos: is_noun(pos) or is_adj(pos) or is_adverb(pos) or is_verb(pos)  # true if word is useful
 
         # do the nlp stuff
-        tokenized = nltk.word_tokenize(line)
-        words = [word for (word, pos) in nltk.pos_tag(tokenized) if included(pos)]
+        tokenized = nltk.word_tokenize(line)  # tokenize review
+        # create words list of useful words where included = true
+        words = [word for (word, pos) in nltk.pos_tag(tokenized) if included(pos)
+                 and word not in set(nltk.corpus.stopwords.words('english'))]
 
         return words
