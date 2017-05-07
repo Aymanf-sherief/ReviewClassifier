@@ -23,17 +23,6 @@ class NaiveClassifier:
         self.data['positive'] = self.positive['X1'].apply(self.filter_words)  # applies filtering to training data
         self.data['negative'] = self.negative['X1'].apply(self.filter_words)
 
-        # reader = sf.SFrame.read_csv('Reviews.csv')
-        # self.pos_data = reader[reader['Score'] > 3]
-        # self.neg_data = reader[reader['Score'] < 3]
-        # self.neg_data, self.neg_test = self.neg_data.random_split(.9, seed=70)
-        # self.pos_data, self.pos_test = self.pos_data.random_split(.99, seed=71)
-        # self.positive_num = float(self.pos_data['Text'].size())
-        # self.negative_num = float(self.neg_data['Text'].size())
-
-
-
-
         # self.data, self.test_data = self.data.random_split(.6, seed=0)
         # extract num of positive and negative reviews
         self.negative_num = float(self.data['negative'].size())

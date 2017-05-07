@@ -31,4 +31,4 @@ txt = ""
 while txt != "exit":  # while input isn't exit: classify input
     txt = raw_input()
     print nc.classify(txt.split())
-#
+
