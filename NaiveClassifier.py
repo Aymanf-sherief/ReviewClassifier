@@ -22,18 +22,15 @@ class NaiveClassifier:
         # combine both sframes into data sframe in a manageable format
         self.data['positive'] = self.positive['X1'].apply(self.filter_words)  # applies filtering to training data
         self.data['negative'] = self.negative['X1'].apply(self.filter_words)
-
         # self.data, self.test_data = self.data.random_split(.6, seed=0)
         # extract num of positive and negative reviews
         self.negative_num = float(self.data['negative'].size())
         self.positive_num = float(self.data['positive'].size())
-
         print self.negative_num
         print self.positive_num
 
     def word_count(self, Type, X):  # counts word occurences in a string and adds it to the correct counts dictionary
         X = set(X)  # take only distinct words
-
         if Type == 'negative':  # negative sentence
             for word in X:
                 if word not in self.positive_count:  # if word not in positive counts then set its positive count to 0
@@ -58,7 +55,6 @@ class NaiveClassifier:
                     self.positive_num)  # log(a/b) = log a - log b
             else:
                 self.positive_count[word] = - m.log(self.positive_num)
-
         for word in self.negative_count:  # do same for negative count
             if self.negative_count[word] != 0.0:
                 self.negative_count[word] = m.log(self.negative_count[word]) - m.log(self.negative_num)
@@ -66,14 +62,12 @@ class NaiveClassifier:
                 self.negative_count[word] = - m.log(self.negative_num)
 
     def classify(self, review):  # takes an input review and decides whether it's positive, negative or neutral
-
         return self.log_classify(review)
 
     def log_classify(self, review):  # classifies using log word count
         word_set = set(review)  # take distinct words
         negativeP = 0.0
         positiveP = 0.0
-
         for word in self.positive_count:  # for each positive word we have
             if word in word_set:  # if word in input review
                 positiveP += float(self.positive_count[word])  # sum it's log probability to total positive probability
@@ -92,11 +86,7 @@ class NaiveClassifier:
         ntest = negativeP - (positiveP + negativeP)
         # test variable is negative if review is negative, positive if review is positive, 0 if neutral by dafault
         test = (ptest - ntest) / (ptest + ntest)
-        # print ptest
-        # print ntest
-
         if test >= 0.005:  # add neutral threshold = 0.005
-
             # print review + "\n is a positive review with probability: " + str(positiveP/negativeP)
             return 1
         elif test <= -0.005:
@@ -110,16 +100,10 @@ class NaiveClassifier:
             self.word_count('negative', review)
         for review in self.data['positive']:  # count every negative review
             self.word_count('positive', review)
-
         self.log_word_count()  # compute log probabilities
-        self.using_log = True
-        # self.filter_counts()
-        # print self.positive_count
-        # print self.negative_count
         print 'Training done successfully...'  # flag
 
     def filter_words(self, line):  # removes stop words and extracts useful words
-
         # nltk.download() -- for dependencies download
         is_noun = lambda pos: pos[:2] == 'NN' or pos[:2] == 'NNS' or pos[:2] == 'NNP'  # true if word is noun
         is_adverb = lambda pos: pos[:2] == 'RB' or pos[:2] == 'RBR' or pos[:2] == 'RBS'  # true if word is adverb
@@ -127,11 +111,9 @@ class NaiveClassifier:
         is_verb = lambda pos: pos[:2] == 'VB' or pos[:2] == 'VBG' or pos[:2] == 'VBD' or \
                               pos[:2] == 'VBP' or pos[:2] == 'VBZ' or pos[:2] == 'VBN'  # true if word is verb
         included = lambda pos: is_noun(pos) or is_adj(pos) or is_adverb(pos) or is_verb(pos)  # true if word is useful
-
         # do the nlp stuff
         tokenized = nltk.word_tokenize(line)  # tokenize review
         # create words list of useful words where included = true
         words = [word for (word, pos) in nltk.pos_tag(tokenized) if included(pos)
                  and word not in set(nltk.corpus.stopwords.words('english'))]
-
         return words
