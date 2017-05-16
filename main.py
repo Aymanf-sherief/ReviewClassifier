@@ -1,6 +1,6 @@
 import NaiveClassifier as nv
 
-nc = nv.NaiveClassifier('negative-data.csv', 'positive-data.csv')
+nc = nv.NaiveClassifier(negative_file='negative-data.csv',positive_file= 'positive-data.csv')
 nc.log_train()  # train the classifier
 e = 0.0  # error
 n = 0.0  # neutral
