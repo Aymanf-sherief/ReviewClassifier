@@ -104,7 +104,7 @@ class NaiveClassifier:
         for review in self.data['positive']:  # count every negative review
             self.word_count('positive', review)
         self.log_word_count()  # compute log probabilities
-        print 'Training done successfully...'  # flag
+        print 'Training done successfully...'
 
     def filter_words(self, line):  # removes stop words and extracts useful words
         # nltk.download() -- for dependencies download
