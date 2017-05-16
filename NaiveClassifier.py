@@ -12,13 +12,14 @@ class NaiveClassifier:
     positive_count = {}  # count of positive words
     negative_num = 0.0  # num of negative reviews
     positive_num = 0.0  # num of positive reviews
-    test_data = sf.SFrame()  # test data - not always used
 
-    def __init__(self, file1, file2):
+    # test_data = sf.SFrame()  # test data - not always used
+
+    def __init__(self, negative_file, positive_file):
         print 'reading...'
         # read negative and positive data
-        self.negative = sf.SFrame.read_csv(file1, header=False)
-        self.positive = sf.SFrame.read_csv(file2, header=False)
+        self.negative = sf.SFrame.read_csv(negative_file, header=False)
+        self.positive = sf.SFrame.read_csv(positive_file, header=False)
         # combine both sframes into data sframe in a manageable format
         self.data['positive'] = self.positive['X1'].apply(self.filter_words)  # applies filtering to training data
         self.data['negative'] = self.negative['X1'].apply(self.filter_words)
@@ -26,10 +27,11 @@ class NaiveClassifier:
         # extract num of positive and negative reviews
         self.negative_num = float(self.data['negative'].size())
         self.positive_num = float(self.data['positive'].size())
+        print self.data
         print self.negative_num
         print self.positive_num
 
-    def word_count(self, Type, X):  # counts word occurences in a string and adds it to the correct counts dictionary
+    def word_count(self, Type, X):  # counts word occurrences in a string and adds it to the correct counts dictionary
         X = set(X)  # take only distinct words
         if Type == 'negative':  # negative sentence
             for word in X:
@@ -51,8 +53,9 @@ class NaiveClassifier:
     def log_word_count(self):  # computes log probability of word counts
         for word in self.positive_count:
             if self.positive_count[word] != 0.0:  # can't take log of 0.0
-                self.positive_count[word] = m.log(self.positive_count[word]) - m.log(
-                    self.positive_num)  # log(a/b) = log a - log b
+                # log(a/b) = log a - log b
+
+                self.positive_count[word] = m.log(self.positive_count[word]) - m.log(self.positive_num)
             else:
                 self.positive_count[word] = - m.log(self.positive_num)
         for word in self.negative_count:  # do same for negative count
